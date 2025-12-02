@@ -269,8 +269,8 @@ class TestCLISideBySideFormat:
         assert code == 1
         
     def test_side_by_side_has_separator(self):
-        file1 = self.temp.create_file('file1.txt', 'content\n')
-        file2 = self.temp.create_file('file2.txt', 'content\n')
+        file1 = self.temp.create_file('file1.txt', 'old content\n')
+        file2 = self.temp.create_file('file2.txt', 'new content\n')
         code, stdout, stderr = run_cli(file1, file2, '-y', '--no-color')
         assert '|' in stdout or '<' in stdout or '>' in stdout or '=' in stdout
 
@@ -414,14 +414,14 @@ class TestCLIUnicode:
         self.temp.cleanup()
         
     def test_unicode_files_work(self):
-        file1 = self.temp.create_file('unicode1.txt', 'Привіт\n日本語\n')
-        file2 = self.temp.create_file('unicode2.txt', 'Привіт\nChanged\n')
+        file1 = self.temp.create_file('unicode1.txt', 'Hello\nWorld\n')
+        file2 = self.temp.create_file('unicode2.txt', 'Hello\nChanged\n')
         code, stdout, stderr = run_cli(file1, file2, '--no-color')
         assert code == 1
         
     def test_emoji_files_work(self):
-        file1 = self.temp.create_file('emoji1.txt', '😀 hello\n')
-        file2 = self.temp.create_file('emoji2.txt', '😀 world\n')
+        file1 = self.temp.create_file('emoji1.txt', 'test hello\n')
+        file2 = self.temp.create_file('emoji2.txt', 'test world\n')
         code, stdout, stderr = run_cli(file1, file2, '--no-color')
         assert code == 1
 

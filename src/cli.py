@@ -4,6 +4,8 @@ import sys
 import os
 from typing import Optional, List, TextIO
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 
 class ANSIColors:
     RESET = '\033[0m'
@@ -76,7 +78,7 @@ class DiffOutputFormatter:
         self.context_lines = context_lines
         
     def format_unified(self, script, file1: str, file2: str, lines1: List[str], lines2: List[str]):
-        from .algorithms.utils import OpType
+        from algorithms.utils import OpType
         has_changes = any(action.op != OpType.EQUAL for action in script)
         if not has_changes:
             return
@@ -87,7 +89,7 @@ class DiffOutputFormatter:
             self._print_hunk(hunk, script)
             
     def _generate_hunks(self, script) -> List[dict]:
-        from .algorithms.utils import OpType
+        from algorithms.utils import OpType
         if not script:
             return []
         change_indices = []
@@ -111,7 +113,7 @@ class DiffOutputFormatter:
         return hunks
     
     def _print_hunk(self, hunk: dict, script):
-        from .algorithms.utils import OpType
+        from algorithms.utils import OpType
         start = hunk['start']
         end = hunk['end']
         orig_start = 0
@@ -146,7 +148,7 @@ class DiffOutputFormatter:
                 self.printer.print_added(str(action.value))
 
     def format_simple(self, script, file1: str, file2: str):
-        from .algorithms.utils import OpType
+        from algorithms.utils import OpType
         for action in script:
             if action.op == OpType.EQUAL:
                 self.printer.print_context(str(action.value))
@@ -289,10 +291,10 @@ Examples:
         return self._compare_files(args, file1, file2)
     
     def _compare_files(self, args, file1: str, file2: str) -> int:
-        from .fs.binary_check import is_binary_file
-        from .fs.walker import read_file_lines
-        from .algorithms.myers import diff
-        from .algorithms.utils import OpType
+        from fs.binary_check import is_binary_file
+        from fs.walker import read_file_lines
+        from algorithms.myers import diff
+        from algorithms.utils import OpType
         try:
             if is_binary_file(file1):
                 self.printer.print_error(f"Binary file: {file1}")
@@ -339,7 +341,7 @@ Examples:
         return 1 if has_changes else 0
     
     def _compare_directories(self, args, dir1: str, dir2: str) -> int:
-        from .fs.walker import DirectoryComparator
+        from fs.walker import DirectoryComparator
         comparator = DirectoryComparator(dir1, dir2)
         result = comparator.compare()
         has_changes = bool(result['only_in_first'] or result['only_in_second'] or result['modified'])
@@ -364,7 +366,7 @@ Examples:
         return 1 if has_changes else 0
     
     def _format_side_by_side(self, script, file1: str, file2: str, width: int):
-        from .algorithms.utils import OpType
+        from algorithms.utils import OpType
         col_width = (width - 3) // 2
         self.printer.print(f"{'=' * width}")
         self.printer.print(f"{file1:<{col_width}} | {file2}")
@@ -398,7 +400,7 @@ Examples:
                 i += 1
     
     def _format_html(self, script, file1: str, file2: str, lines1: List[str], lines2: List[str]):
-        from .algorithms.utils import OpType
+        from algorithms.utils import OpType
         from html import escape
         html_parts = []
         html_parts.append('<!DOCTYPE html>')

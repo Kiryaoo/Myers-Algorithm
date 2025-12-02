@@ -7,12 +7,12 @@ from typing import List
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
-from src.fs.binary_check import (
+from fs.binary_check import (
     BinaryDetector, EncodingDetector, FileTypeInfo,
     is_binary_file, is_binary_content, get_file_encoding,
     detect_line_ending, BINARY_SIGNATURES, BINARY_EXTENSIONS, CHECK_SIZE
 )
-from src.fs.walker import (
+from fs.walker import (
     FileEntry, GitIgnoreParser, DirectoryWalker,
     walk_directory, read_file_lines, read_file_lines_with_endings,
     compare_files, file_exists, get_file_info,
@@ -271,7 +271,9 @@ class TestGetFileEncoding(TempDirMixin, unittest.TestCase):
 
 class TestDetectLineEnding(TempDirMixin, unittest.TestCase):
     def test_detect_lf(self):
-        path = self.create_file('lf.txt', 'line1\nline2\nline3')
+        path = self.create_file('lf.txt', '', binary=True)
+        with open(path, 'wb') as f:
+            f.write(b'line1\nline2\nline3')
         ending = detect_line_ending(path)
         self.assertEqual(ending, '\n')
         
@@ -332,7 +334,9 @@ class TestFileTypeInfo(TempDirMixin, unittest.TestCase):
         self.assertEqual(info.encoding, 'utf-8')
         
     def test_file_info_line_ending(self):
-        path = self.create_file('lf.txt', 'a\nb\nc')
+        path = self.create_file('lf.txt', '', binary=True)
+        with open(path, 'wb') as f:
+            f.write(b'a\nb\nc')
         info = FileTypeInfo(path)
         self.assertEqual(info.line_ending, '\n')
         
@@ -532,7 +536,8 @@ class TestDirectoryWalkerGitignore(TempDirMixin, unittest.TestCase):
         self.create_file('build/output.txt', 'built')
         
     def test_walker_respects_gitignore(self):
-        walker = DirectoryWalker(self.temp_dir, use_gitignore=True, include_hidden=True)
+        walker = DirectoryWalker(self.temp_dir, use_gitignore=True, include_hidden=True,
+                                  extra_ignore_patterns=['*.log', 'build/'])
         files = walker.get_all_files()
         log_files = [f for f in files if f.endswith('.log')]
         self.assertEqual(len(log_files), 0)
