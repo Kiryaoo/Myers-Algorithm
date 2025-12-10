@@ -1,9 +1,7 @@
 from typing import TypeVar, List, Dict, Tuple, Optional
 from .utils import EditAction, EditScript, OpType, make_insert, make_delete, make_equal
 
-
 T = TypeVar('T')
-
 
 class HirschbergDiff:
     def __init__(self, original: List[T], modified: List[T]):
@@ -77,11 +75,9 @@ class HirschbergDiff:
             result.append(make_insert(elem))
         return result
 
-
 def diff_linear(original: List[T], modified: List[T]) -> EditScript:
     differ = HirschbergDiff(original, modified)
     return differ.compute()
-
 
 class LinearSpaceMyers:
     def __init__(self, original: List[T], modified: List[T]):
@@ -198,7 +194,6 @@ def diff_linear_myers(original: List[T], modified: List[T]) -> EditScript:
     differ = LinearSpaceMyers(original, modified)
     return differ.compute()
 
-
 class DiffEngine:
     def __init__(self, use_linear_space: bool = False):
         self.use_linear_space = use_linear_space
@@ -225,7 +220,6 @@ class DiffEngine:
     def compute_edit_distance(self, a: List[T], b: List[T]) -> int:
         script = self.diff(a, b)
         return sum(1 for action in script if action.op != OpType.EQUAL)
-
 
 class BatchDiffer:
     def __init__(self, engine: Optional[DiffEngine] = None):

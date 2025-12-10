@@ -1,9 +1,7 @@
 from typing import TypeVar, List, Dict, Optional, Any, Tuple
 from .utils import EditAction, EditScript, OpType, make_insert, make_delete, make_equal, DiffResult
 
-
 T = TypeVar('T')
-
 
 class MyersDiff:
     def __init__(self, original: List[T], modified: List[T]):
@@ -81,11 +79,9 @@ class MyersDiff:
         script = self.compute()
         return DiffResult.from_script(script, self.n, self.m)
 
-
 def diff(original: List[T], modified: List[T]) -> EditScript:
     differ = MyersDiff(original, modified)
     return differ.compute()
-
 
 def patch(original: List[T], script: EditScript) -> List[T]:
     result: List[T] = []
@@ -115,16 +111,13 @@ def patch(original: List[T], script: EditScript) -> List[T]:
         raise ValueError(f"Script incomplete: consumed {orig_idx} of {len(original)}")
     return result
 
-
 def edit_distance(original: List[T], modified: List[T]) -> int:
     differ = MyersDiff(original, modified)
     return differ.get_edit_distance()
 
-
 def lcs_length(original: List[T], modified: List[T]) -> int:
     script = diff(original, modified)
     return sum(1 for action in script if action.op == OpType.EQUAL)
-
 
 def similarity_ratio(original: List[T], modified: List[T]) -> float:
     if not original and not modified:
@@ -132,7 +125,6 @@ def similarity_ratio(original: List[T], modified: List[T]) -> float:
     lcs = lcs_length(original, modified)
     total = len(original) + len(modified)
     return (2.0 * lcs) / total if total > 0 else 1.0
-
 
 class SnakeInfo:
     def __init__(self, x_start: int, y_start: int, x_end: int, y_end: int):
@@ -145,14 +137,12 @@ class SnakeInfo:
     def length(self) -> int:
         return self.x_end - self.x_start
 
-
 class EditGraphNode:
     def __init__(self, x: int, y: int, parent: Optional['EditGraphNode'] = None, op: Optional[OpType] = None):
         self.x = x
         self.y = y
         self.parent = parent
         self.op = op
-
 
 def find_middle_snake(original: List[T], modified: List[T], 
                       x_offset: int = 0, y_offset: int = 0) -> Tuple[int, int, int, int, int]:

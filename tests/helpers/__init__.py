@@ -4,13 +4,8 @@ from helpers.naive_diff import (
     NaiveDiff,
     NaiveLCS,
     SimpleDiff,
-    RecursiveLCS,
-    PatienceDiff,
-    HistogramDiff,
-    BlockDiff,
     DiffVerifier,
     DiffStats,
-    LCSMatrix,
     naive_diff,
     simple_diff,
     lcs,
@@ -18,8 +13,6 @@ from helpers.naive_diff import (
     edit_distance,
     verify_diff,
     get_diff_stats,
-    patience_diff,
-    histogram_diff
 )
 
 
@@ -29,13 +22,8 @@ __all__ = [
     "NaiveDiff",
     "NaiveLCS",
     "SimpleDiff",
-    "RecursiveLCS",
-    "PatienceDiff",
-    "HistogramDiff",
-    "BlockDiff",
     "DiffVerifier",
     "DiffStats",
-    "LCSMatrix",
     "naive_diff",
     "simple_diff",
     "lcs",
@@ -43,6 +31,4 @@ __all__ = [
     "edit_distance",
     "verify_diff",
     "get_diff_stats",
-    "patience_diff",
-    "histogram_diff"
 ]

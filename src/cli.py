@@ -1,11 +1,9 @@
-#!/usr/bin/env python3
 import argparse
 import sys
 import os
 from typing import Optional, List, TextIO
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 
 class ANSIColors:
     RESET = '\033[0m'

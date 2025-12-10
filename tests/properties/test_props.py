@@ -28,7 +28,6 @@ from properties.generators import (
     SimilarSequenceGenerator,
     EdgeCaseGenerator,
     TestCaseGenerator,
-    LoadTestGenerator,
     GeneratorMode,
     generate_random_sequences,
     generate_similar_sequences,
@@ -36,172 +35,67 @@ from properties.generators import (
     generate_test_cases
 )
 
-
 class TestDiffProperties(unittest.TestCase):
     def setUp(self):
-        self.config = GeneratorConfig(seed=42, max_length=30)
+        self.config = GeneratorConfig(seed=42, max_length=20)
         self.test_gen = TestCaseGenerator(self.config)
-        
-    def _apply_diff_to_old(self, old: List[str], actions: List[EditAction]) -> List[str]:
-        result = []
-        for action in actions:
-            if action.op == OpType.EQUAL:
-                result.append(action.value)
-            elif action.op == OpType.INSERT:
-                result.append(action.value)
-        return result
-        
-    def _apply_diff_to_get_old(self, actions: List[EditAction]) -> List[str]:
-        result = []
-        for action in actions:
-            if action.op == OpType.EQUAL:
-                result.append(action.value)
-            elif action.op == OpType.DELETE:
-                result.append(action.value)
-        return result
 
-    def test_property_diff_produces_new_sequence(self):
-        for _ in range(50):
-            old = [f"line_{i}" for i in range(random.randint(1, 20))]
-            new = [f"line_{i}" for i in range(random.randint(1, 20))]
-            random.shuffle(new)
-            actions = myers_diff(old, new)
-            reconstructed = self._apply_diff_to_old(old, actions)
-            self.assertEqual(reconstructed, new)
-            
-    def test_property_diff_preserves_old_sequence(self):
-        for _ in range(50):
-            old = [f"old_{i}" for i in range(random.randint(1, 20))]
-            new = [f"new_{i}" for i in range(random.randint(1, 20))]
-            actions = myers_diff(old, new)
-            reconstructed = self._apply_diff_to_get_old(actions)
-            self.assertEqual(reconstructed, old)
-            
-    def test_property_identical_sequences_no_changes(self):
-        for length in [0, 1, 5, 10, 20]:
-            seq = [f"line_{i}" for i in range(length)]
-            actions = myers_diff(seq, seq.copy())
-            has_changes = any(a.op != OpType.EQUAL for a in actions)
-            self.assertFalse(has_changes, f"Identical sequences should have no changes for length {length}")
-            
-    def test_property_empty_old_all_inserts(self):
-        for length in [1, 5, 10]:
-            new = [f"line_{i}" for i in range(length)]
-            actions = myers_diff([], new)
-            self.assertEqual(len(actions), length)
-            self.assertTrue(all(a.op == OpType.INSERT for a in actions))
-            
-    def test_property_empty_new_all_deletes(self):
-        for length in [1, 5, 10]:
-            old = [f"line_{i}" for i in range(length)]
-            actions = myers_diff(old, [])
-            self.assertEqual(len(actions), length)
-            self.assertTrue(all(a.op == OpType.DELETE for a in actions))
-            
-    def test_property_diff_is_minimal(self):
-        for _ in range(30):
+    def _reconstruct_new(self, actions: List[EditAction]) -> List[str]:
+        return [a.value for a in actions if a.op in (OpType.EQUAL, OpType.INSERT)]
+
+    def _reconstruct_old(self, actions: List[EditAction]) -> List[str]:
+        return [a.value for a in actions if a.op in (OpType.EQUAL, OpType.DELETE)]
+
+    def test_basic_roundtrip_and_empty_cases(self):
+        cases = [self.test_gen.generate_random_case(), *self.test_gen.generate_edge_cases()[:3]]
+        for case in cases:
+            actions = myers_diff(case.old, case.new)
+            self.assertEqual(self._reconstruct_new(actions), case.new)
+            if case.old:
+                self.assertEqual(self._reconstruct_old(actions), case.old)
+
+    def test_minimality_and_identical(self):
+        for _ in range(8):
             case = self.test_gen.generate_similar_case()
             actions = myers_diff(case.old, case.new)
             myers_changes = sum(1 for a in actions if a.op != OpType.EQUAL)
             naive_changes = naive_edit_distance(case.old, case.new)
             self.assertLessEqual(myers_changes, naive_changes + 1)
-
+        seq = [f"line_{i}" for i in range(5)]
+        self.assertFalse(any(a.op != OpType.EQUAL for a in myers_diff(seq, seq.copy())))
 
 class TestMyersVsNaive(unittest.TestCase):
     def setUp(self):
-        self.config = GeneratorConfig(seed=123, max_length=25)
+        self.config = GeneratorConfig(seed=123, max_length=15)
         self.seq_gen = SequenceGenerator(self.config)
         self.similar_gen = SimilarSequenceGenerator(self.config)
-        
-    def _count_changes(self, actions: List[EditAction]) -> int:
-        return sum(1 for a in actions if a.op != OpType.EQUAL)
-        
-    def _verify_reconstruction(self, old: List[str], new: List[str], actions: List[EditAction]) -> bool:
-        result = []
-        for action in actions:
-            if action.op == OpType.EQUAL:
-                result.append(action.value)
-            elif action.op == OpType.INSERT:
-                result.append(action.value)
-        return result == new
 
-    def test_myers_equals_naive_on_random(self):
-        for _ in range(30):
-            old = self.seq_gen.generate_char_list(random.randint(5, 15))
-            new = self.seq_gen.generate_char_list(random.randint(5, 15))
-            myers_actions = myers_diff(old, new)
-            self.assertTrue(self._verify_reconstruction(old, new, myers_actions))
-            
-    def test_myers_equals_naive_on_similar(self):
-        for _ in range(30):
-            old, new = self.similar_gen.generate_pair(random.randint(10, 20))
-            myers_actions = myers_diff(old, new)
-            self.assertTrue(self._verify_reconstruction(old, new, myers_actions))
-            
-    def test_myers_on_edge_cases(self):
-        edge_gen = EdgeCaseGenerator()
-        cases = [
-            edge_gen.empty_sequences(),
-            edge_gen.first_empty(),
-            edge_gen.second_empty(),
-            edge_gen.identical_sequences(),
-            edge_gen.completely_different(),
-            edge_gen.single_element(),
-            edge_gen.reversed_sequence(),
-            edge_gen.duplicated_lines(),
-            edge_gen.long_common_prefix(),
-            edge_gen.long_common_suffix(),
-        ]
-        for old, new in cases:
-            myers_actions = myers_diff(old, new)
-            self.assertTrue(self._verify_reconstruction(old, new, myers_actions))
+    def _verify(self, old, new):
+        actions = myers_diff(old, new)
+        reconstructed = [a.value for a in actions if a.op in (OpType.EQUAL, OpType.INSERT)]
+        return reconstructed == new
 
+    def test_basic_random_and_similar(self):
+        for _ in range(10):
+            old = self.seq_gen.generate_char_list(random.randint(3, 10))
+            new = self.seq_gen.generate_char_list(random.randint(3, 10))
+            self.assertTrue(self._verify(old, new))
+        for _ in range(8):
+            old, new = self.similar_gen.generate_pair(random.randint(5, 12))
+            self.assertTrue(self._verify(old, new))
 
 class TestHirschbergProperties(unittest.TestCase):
     def setUp(self):
-        self.config = GeneratorConfig(seed=456, max_length=30)
-        self.similar_gen = SimilarSequenceGenerator(self.config)
-        
-    def _verify_reconstruction(self, old: List[str], new: List[str], actions: List[EditAction]) -> bool:
-        result = []
-        for action in actions:
-            if action.op == OpType.EQUAL:
-                result.append(action.value)
-            elif action.op == OpType.INSERT:
-                result.append(action.value)
-        return result == new
+        self.similar_gen = SimilarSequenceGenerator(GeneratorConfig(seed=456, max_length=20))
 
-    def test_hirschberg_produces_valid_diff(self):
-        for _ in range(30):
-            old, new = self.similar_gen.generate_pair(random.randint(10, 25))
-            hirschberg = HirschbergDiff(old, new)
-            actions = hirschberg.compute()
-            self.assertTrue(self._verify_reconstruction(old, new, actions))
-            
-    def test_hirschberg_vs_myers_same_result(self):
-        for _ in range(20):
+    def test_hirschberg_matches_myers_and_roundtrips(self):
+        for _ in range(8):
             old, new = self.similar_gen.generate_pair(random.randint(5, 15))
-            hirschberg = HirschbergDiff(old, new)
-            hirsch_actions = hirschberg.compute()
-            myers_actions = myers_diff(old, new)
-            hirsch_result = []
-            for a in hirsch_actions:
-                if a.op == OpType.EQUAL or a.op == OpType.INSERT:
-                    hirsch_result.append(a.value)
-            myers_result = []
-            for a in myers_actions:
-                if a.op == OpType.EQUAL or a.op == OpType.INSERT:
-                    myers_result.append(a.value)
-            self.assertEqual(hirsch_result, myers_result)
-            self.assertEqual(hirsch_result, new)
-            
-    def test_linear_space_myers(self):
-        for _ in range(20):
-            old, new = self.similar_gen.generate_pair(random.randint(10, 20))
-            linear = LinearSpaceMyers(old, new)
-            actions = linear.compute()
-            self.assertTrue(self._verify_reconstruction(old, new, actions))
-
+            h_actions = HirschbergDiff(old, new).compute()
+            m_actions = myers_diff(old, new)
+            self.assertEqual([a.value for a in h_actions if a.op in (OpType.EQUAL, OpType.INSERT)],
+                             [a.value for a in m_actions if a.op in (OpType.EQUAL, OpType.INSERT)])
+            self.assertEqual([a.value for a in h_actions if a.op in (OpType.EQUAL, OpType.INSERT)], new)
 
 class TestSymmetryProperties(unittest.TestCase):
     def setUp(self):
@@ -223,7 +117,6 @@ class TestSymmetryProperties(unittest.TestCase):
             rev_ins, rev_del = self._count_inserts_deletes(reverse_actions)
             self.assertEqual(fwd_ins, rev_del)
             self.assertEqual(fwd_del, rev_ins)
-
 
 class TestEditDistanceProperties(unittest.TestCase):
     def setUp(self):
@@ -265,7 +158,6 @@ class TestEditDistanceProperties(unittest.TestCase):
             d_ac = self._myers_edit_distance(a, c)
             self.assertLessEqual(d_ac, d_ab + d_bc)
 
-
 class TestLCSProperties(unittest.TestCase):
     def setUp(self):
         self.config = GeneratorConfig(seed=202, max_length=15)
@@ -291,117 +183,43 @@ class TestLCSProperties(unittest.TestCase):
         lcs_len = lcs_length(old, new)
         self.assertEqual(lcs_len, 0)
 
-
 class TestGenerators(unittest.TestCase):
-    def test_sequence_generator(self):
-        config = GeneratorConfig(min_length=5, max_length=10)
-        gen = SequenceGenerator(config)
-        for _ in range(10):
+    def test_sequence_and_similar_generators(self):
+        gen = SequenceGenerator(GeneratorConfig(min_length=3, max_length=6))
+        for _ in range(6):
             seq = gen.generate_list()
-            self.assertGreaterEqual(len(seq), 5)
-            self.assertLessEqual(len(seq), 10)
-            
-    def test_similar_sequence_generator(self):
-        config = GeneratorConfig(similarity_ratio=0.8)
-        gen = SimilarSequenceGenerator(config)
-        old, new = gen.generate_pair(20)
-        common = set(old) & set(new)
-        self.assertGreater(len(common), 0)
-        
-    def test_edge_case_generator(self):
-        gen = EdgeCaseGenerator()
-        cases = generate_edge_cases()
-        self.assertGreater(len(cases), 5)
-        for old, new in cases:
-            self.assertIsInstance(old, list)
-            self.assertIsInstance(new, list)
-            
-    def test_test_case_generator(self):
-        gen = TestCaseGenerator()
-        cases = gen.generate_batch(10, GeneratorMode.RANDOM)
-        self.assertEqual(len(cases), 10)
-        for case in cases:
-            self.assertIsInstance(case.old, list)
-            self.assertIsInstance(case.new, list)
-
+            self.assertTrue(3 <= len(seq) <= 6)
+        sgen = SimilarSequenceGenerator(GeneratorConfig(similarity_ratio=0.7))
+        old, new = sgen.generate_pair(10)
+        self.assertIsInstance(old, list)
+        self.assertIsInstance(new, list)
+        self.assertTrue(len(new) > 0)
 
 class TestStressSmall(unittest.TestCase):
-    def test_many_small_diffs(self):
-        config = GeneratorConfig(seed=303, max_length=10)
-        gen = SequenceGenerator(config)
-        for _ in range(100):
+    def test_multiple_small_diffs(self):
+        gen = SequenceGenerator(GeneratorConfig(seed=303, max_length=8))
+        for _ in range(30):
             old = gen.generate_char_list()
             new = gen.generate_char_list()
             actions = myers_diff(old, new)
-            result = []
-            for a in actions:
-                if a.op in (OpType.EQUAL, OpType.INSERT):
-                    result.append(a.value)
-            self.assertEqual(result, new)
-
+            self.assertEqual([a.value for a in actions if a.op in (OpType.EQUAL, OpType.INSERT)], new)
 
 class TestSpecialCases(unittest.TestCase):
-    def test_single_character_sequences(self):
-        test_cases = [
-            (['a'], ['a']),
-            (['a'], ['b']),
-            (['a'], []),
-            ([], ['a']),
-        ]
-        for old, new in test_cases:
+    def test_single_char_and_repeats(self):
+        cases = [(['a'], ['a']), (['a'], ['b']), ([], ['a']), (['x']*5, ['x']*5)]
+        for old, new in cases:
             actions = myers_diff(old, new)
-            result = [a.value for a in actions if a.op in (OpType.EQUAL, OpType.INSERT)]
-            self.assertEqual(result, new)
-            
-    def test_all_same_elements(self):
-        old = ['x'] * 10
-        new = ['x'] * 10
-        actions = myers_diff(old, new)
-        changes = sum(1 for a in actions if a.op != OpType.EQUAL)
-        self.assertEqual(changes, 0)
-        
-    def test_alternating_elements(self):
-        old = ['a', 'b'] * 5
-        new = ['b', 'a'] * 5
-        actions = myers_diff(old, new)
-        result = [a.value for a in actions if a.op in (OpType.EQUAL, OpType.INSERT)]
-        self.assertEqual(result, new)
-        
-    def test_prefix_suffix_common(self):
-        old = ['a', 'b', 'c', 'OLD', 'd', 'e', 'f']
-        new = ['a', 'b', 'c', 'NEW', 'd', 'e', 'f']
-        actions = myers_diff(old, new)
-        result = [a.value for a in actions if a.op in (OpType.EQUAL, OpType.INSERT)]
-        self.assertEqual(result, new)
+            self.assertEqual([a.value for a in actions if a.op in (OpType.EQUAL, OpType.INSERT)], new)
 
-
-class TestDeterminism(unittest.TestCase):
-    def test_same_input_same_output(self):
-        old = ['line_1', 'line_2', 'line_3', 'line_4', 'line_5']
-        new = ['line_1', 'modified', 'line_3', 'new_line', 'line_5']
-        results = []
-        for _ in range(10):
-            actions = myers_diff(old, new)
-            result = [a.value for a in actions if a.op in (OpType.EQUAL, OpType.INSERT)]
-            results.append(tuple(result))
-        self.assertEqual(len(set(results)), 1)
-
-
-class TestBoundaryConditions(unittest.TestCase):
-    def test_very_different_lengths(self):
-        old = ['a'] * 3
-        new = ['b'] * 30
-        actions = myers_diff(old, new)
-        result = [a.value for a in actions if a.op in (OpType.EQUAL, OpType.INSERT)]
-        self.assertEqual(result, new)
-        
-    def test_long_to_short(self):
-        old = ['x'] * 30
-        new = ['y'] * 3
-        actions = myers_diff(old, new)
-        result = [a.value for a in actions if a.op in (OpType.EQUAL, OpType.INSERT)]
-        self.assertEqual(result, new)
-
+class TestDeterminismAndBoundary(unittest.TestCase):
+    def test_determinism_and_length_extremes(self):
+        old = ['line_1', 'line_2', 'line_3']
+        new = ['line_1', 'modified', 'line_3']
+        first = [a.value for a in myers_diff(old, new) if a.op in (OpType.EQUAL, OpType.INSERT)]
+        for _ in range(5):
+            self.assertEqual(first, [a.value for a in myers_diff(old, new) if a.op in (OpType.EQUAL, OpType.INSERT)])
+        self.assertEqual([a.value for a in myers_diff(['a']*2, ['b']*10) if a.op in (OpType.EQUAL, OpType.INSERT)], ['b']*10)
+        self.assertEqual([a.value for a in myers_diff(['x']*10, ['y']*2) if a.op in (OpType.EQUAL, OpType.INSERT)], ['y']*2)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

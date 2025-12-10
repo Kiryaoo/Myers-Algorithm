@@ -1,99 +1,24 @@
 from formatters.base import (
-    BaseFormatter,
-    SimpleFormatter,
-    FormatterConfig,
-    FormatterFactory,
-    ColorScheme,
-    OutputWriter,
-    OutputTarget,
-    DiffHunk,
-    HunkGenerator
+    BaseFormatter, SimpleFormatter, FormatterConfig, FormatterFactory,
+    ColorScheme, OutputWriter, OutputTarget, DiffHunk, HunkGenerator
 )
-
-from formatters.unified import (
-    UnifiedFormatter,
-    UnifiedDiffHeader,
-    UnifiedDiffStats,
-    UnifiedLineFormatter,
-    HunkHeader,
-    ContextDiffFormatter,
-    NormalDiffFormatter,
-    EDDiffFormatter,
-    RCSDiffFormatter
-)
-
+from formatters.unified import UnifiedFormatter, ContextDiffFormatter, NormalDiffFormatter
 from formatters.side_by_side import (
-    SideBySideFormatter,
-    SideBySideRow,
-    SideBySideGenerator,
-    SideBySideRowFormatter,
-    SideBySideHeader,
-    ColumnConfig,
-    TextTruncator,
-    LineNumberFormatter,
-    GutterFormatter,
-    CompactSideBySideFormatter,
-    WordDiffFormatter,
-    InlineDiffFormatter
+    SideBySideFormatter, SideBySideRow, SideBySideGenerator, SideBySideRowFormatter,
+    SideBySideHeader, ColumnConfig, TextTruncator, LineNumberFormatter, GutterFormatter,
+    CompactSideBySideFormatter, WordDiffFormatter, InlineDiffFormatter
 )
-
-from formatters.html import (
-    HTMLFormatter,
-    HTMLDocument,
-    HTMLElement,
-    DiffStylesheet,
-    CSSStylesheet,
-    DiffTableBuilder,
-    SideBySideTableBuilder,
-    SideBySideHTMLFormatter,
-    GitHubStyleFormatter,
-    JSONFormatter,
-    XMLFormatter
-)
+from formatters.html import HTMLFormatter, SideBySideHTMLFormatter, JSONFormatter
 
 
 __all__ = [
-    "BaseFormatter",
-    "SimpleFormatter",
-    "FormatterConfig",
-    "FormatterFactory",
-    "ColorScheme",
-    "OutputWriter",
-    "OutputTarget",
-    "DiffHunk",
-    "HunkGenerator",
-    "UnifiedFormatter",
-    "UnifiedDiffHeader",
-    "UnifiedDiffStats",
-    "UnifiedLineFormatter",
-    "HunkHeader",
-    "ContextDiffFormatter",
-    "NormalDiffFormatter",
-    "EDDiffFormatter",
-    "RCSDiffFormatter",
-    "SideBySideFormatter",
-    "SideBySideRow",
-    "SideBySideGenerator",
-    "SideBySideRowFormatter",
-    "SideBySideHeader",
-    "ColumnConfig",
-    "TextTruncator",
-    "LineNumberFormatter",
-    "GutterFormatter",
-    "CompactSideBySideFormatter",
-    "WordDiffFormatter",
-    "InlineDiffFormatter",
-    "HTMLFormatter",
-    "HTMLDocument",
-    "HTMLElement",
-    "DiffStylesheet",
-    "CSSStylesheet",
-    "DiffTableBuilder",
-    "SideBySideTableBuilder",
-    "SideBySideHTMLFormatter",
-    "GitHubStyleFormatter",
-    "JSONFormatter",
-    "XMLFormatter"
+    "BaseFormatter", "SimpleFormatter", "FormatterConfig", "FormatterFactory",
+    "ColorScheme", "OutputWriter", "OutputTarget", "DiffHunk", "HunkGenerator",
+    "UnifiedFormatter", "ContextDiffFormatter", "NormalDiffFormatter",
+    "SideBySideFormatter", "SideBySideRow", "SideBySideGenerator", "SideBySideRowFormatter",
+    "SideBySideHeader", "ColumnConfig", "TextTruncator", "LineNumberFormatter",
+    "GutterFormatter", "CompactSideBySideFormatter", "WordDiffFormatter", "InlineDiffFormatter",
+    "HTMLFormatter", "SideBySideHTMLFormatter", "JSONFormatter"
 ]
 
 
