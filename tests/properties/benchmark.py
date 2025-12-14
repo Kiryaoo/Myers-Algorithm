@@ -2,6 +2,7 @@ import time
 import random
 import sys
 import os
+import tracemalloc
 from typing import List, Tuple, Callable, Any, Dict
 from dataclasses import dataclass
 from statistics import mean, stdev, median
@@ -222,35 +223,101 @@ class ScalingBenchmark:
 
 
 class MemoryBenchmark:
+    """
+    Measures actual memory consumption using tracemalloc.
+    This provides real runtime memory measurements rather than theoretical estimates.
+    """
     def __init__(self):
         self.results = []
+        self.data_gen = DataGenerator()
         
-    def estimate_memory(self, size: int) -> Dict[str, int]:
+    def _measure_memory(self, func: Callable, *args) -> int:
+        """
+        Measure actual peak memory usage of a function call using tracemalloc.
+        Returns memory usage in bytes.
+        """
+        # Clear any existing traces
+        tracemalloc.stop() if tracemalloc.is_tracing() else None
+        
+        # Start tracing
+        tracemalloc.start()
+        
+        try:
+            # Execute the function
+            func(*args)
+            
+            # Get peak memory usage
+            current, peak = tracemalloc.get_traced_memory()
+            return peak
+        finally:
+            tracemalloc.stop()
+    
+    def measure_algorithm_memory(self, old: List[str], new: List[str]) -> Dict[str, int]:
+        """
+        Measure actual memory usage for each algorithm.
+        """
+        def run_myers():
+            return myers_diff(old, new)
+        
+        def run_hirschberg():
+            return HirschbergDiff(old, new).compute()
+        
+        def run_linear_myers():
+            return LinearSpaceMyers(old, new).compute()
+        
         return {
-            'Myers': size * 2 * 8,
-            'Hirschberg': size * 8,
-            'Naive_LCS': size * size * 8,
+            'Myers': self._measure_memory(run_myers),
+            'Hirschberg': self._measure_memory(run_hirschberg),
+            'LinearSpaceMyers': self._measure_memory(run_linear_myers),
         }
         
-    def run(self, sizes: List[int]) -> List[Dict[str, int]]:
+    def run(self, sizes: List[int], similarity: float = 0.8) -> List[Dict[str, Any]]:
+        """
+        Run memory benchmarks for various input sizes.
+        Uses actual memory measurement via tracemalloc.
+        """
         self.results = []
         for size in sizes:
+            old, new = self.data_gen.generate_similar_pair(size, similarity)
+            memory_usage = self.measure_algorithm_memory(old, new)
             self.results.append({
                 'size': size,
-                'memory': self.estimate_memory(size)
+                'memory': memory_usage
             })
         return self.results
         
     def print_results(self):
         print("\n" + "=" * 70)
-        print("MEMORY USAGE ESTIMATES (bytes)")
+        print("MEMORY USAGE (bytes) - Measured with tracemalloc")
         print("=" * 70)
-        print(f"{'Size':<10}{'Myers':<15}{'Hirschberg':<15}{'Naive LCS':<15}")
+        print(f"{'Size':<10}{'Myers':<20}{'Hirschberg':<20}{'LinearSpaceMyers':<20}")
         print("-" * 70)
         for result in self.results:
             size = result['size']
             mem = result['memory']
-            print(f"{size:<10}{mem['Myers']:<15}{mem['Hirschberg']:<15}{mem['Naive_LCS']:<15}")
+            print(f"{size:<10}{mem['Myers']:<20}{mem['Hirschberg']:<20}{mem['LinearSpaceMyers']:<20}")
+        
+    def compare_memory_efficiency(self) -> None:
+        """
+        Print a comparison showing memory efficiency ratios.
+        """
+        if not self.results:
+            print("No results available. Run benchmarks first.")
+            return
+            
+        print("\n" + "=" * 70)
+        print("MEMORY EFFICIENCY COMPARISON")
+        print("=" * 70)
+        print(f"{'Size':<10}{'LinearMyers/Myers':<25}{'Hirschberg/Myers':<25}")
+        print("-" * 70)
+        for result in self.results:
+            size = result['size']
+            mem = result['memory']
+            myers_mem = mem['Myers']
+            if myers_mem > 0:
+                linear_ratio = mem['LinearSpaceMyers'] / myers_mem
+                hirsch_ratio = mem['Hirschberg'] / myers_mem
+                print(f"{size:<10}{linear_ratio:<25.3f}{hirsch_ratio:<25.3f}")
 
 
 class AlgorithmComparison:
@@ -311,10 +378,11 @@ def run_full_benchmark():
     print("\n--- Best Case (identical) ---")
     scaling.run_scaling_test("best")
     scaling.print_results()
-    print("\n--- Memory Estimates ---")
+    print("\n--- Memory Benchmarks (actual measurements) ---")
     mem_bench = MemoryBenchmark()
-    mem_bench.run([100, 500, 1000, 5000])
+    mem_bench.run([100, 500, 1000, 2000])
     mem_bench.print_results()
+    mem_bench.compare_memory_efficiency()
     print("\n--- Correctness Verification ---")
     comparison = AlgorithmComparison()
     passed, failed = comparison.run_correctness_tests(30)

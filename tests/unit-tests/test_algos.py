@@ -268,6 +268,120 @@ class TestLinearSpace(unittest.TestCase):
         self.assertEqual(sum(1 for a in script if a.op == OpType.EQUAL), 2)
 
 
+class TestLinearSpaceMyersStrict(unittest.TestCase):
+    """
+    Strict tests for LinearSpaceMyers to verify correctness and optimality.
+    These tests go beyond checking isinstance to verify actual edit distances
+    and script correctness.
+    """
+    
+    def _edit_distance(self, script):
+        """Count non-equal operations in a script."""
+        return sum(1 for a in script if a.op != OpType.EQUAL)
+    
+    def _reconstruct_new(self, script):
+        """Reconstruct the new sequence from an edit script."""
+        return [a.value for a in script if a.op in (OpType.EQUAL, OpType.INSERT)]
+    
+    def test_linear_space_known_edit_distances(self):
+        """Test LinearSpaceMyers against known edit distance values."""
+        test_cases = [
+            # (old, new, expected_edit_distance)
+            ([], [], 0),
+            (['a'], ['a'], 0),
+            (['a'], ['b'], 2),  # delete 'a', insert 'b'
+            (['a', 'b', 'c'], ['a', 'b', 'c'], 0),
+            (['a', 'b', 'c'], ['a', 'x', 'c'], 2),  # delete 'b', insert 'x'
+            (['a', 'b', 'c'], ['x', 'y', 'z'], 6),  # all different
+            ([], ['a', 'b', 'c'], 3),  # all inserts
+            (['a', 'b', 'c'], [], 3),  # all deletes
+            (['a', 'b'], ['b', 'a'], 2),  # swap requires 2 edits (del a, ins a)
+            (['a', 'b', 'c', 'd'], ['a', 'c', 'd'], 1),  # single delete
+            (['a', 'c', 'd'], ['a', 'b', 'c', 'd'], 1),  # single insert
+        ]
+        
+        for old, new, expected in test_cases:
+            script = LinearSpaceMyers(old, new).compute()
+            actual = self._edit_distance(script)
+            self.assertEqual(actual, expected,
+                f"LinearSpaceMyers edit distance mismatch for "
+                f"old={old}, new={new}: expected {expected}, got {actual}")
+            
+            # Also verify roundtrip
+            reconstructed = self._reconstruct_new(script)
+            self.assertEqual(reconstructed, new,
+                f"LinearSpaceMyers roundtrip failed for old={old}, new={new}")
+    
+    def test_linear_space_matches_standard_myers(self):
+        """Verify LinearSpaceMyers matches standard Myers algorithm."""
+        test_cases = [
+            (list("ABCABBA"), list("CBABAC")),
+            (list("algorithm"), list("logarithm")),
+            (list("kitten"), list("sitting")),
+            (['line1', 'line2', 'line3'], ['line1', 'modified', 'line3']),
+            (['a', 'a', 'a', 'a'], ['b', 'b', 'b', 'b']),
+            (list("abcdefghij"), list("0a1b2c3d4e")),
+        ]
+        
+        for old, new in test_cases:
+            standard_script = diff(old, new)
+            linear_script = LinearSpaceMyers(old, new).compute()
+            
+            standard_dist = self._edit_distance(standard_script)
+            linear_dist = self._edit_distance(linear_script)
+            
+            self.assertEqual(linear_dist, standard_dist,
+                f"Edit distance mismatch: standard={standard_dist}, linear={linear_dist}, "
+                f"old={''.join(old) if isinstance(old[0], str) and len(old[0])==1 else old}, "
+                f"new={''.join(new) if isinstance(new[0], str) and len(new[0])==1 else new}")
+    
+    def test_linear_space_correct_reconstruction(self):
+        """Test that applying the edit script produces the correct result."""
+        test_cases = [
+            (['a', 'b', 'c', 'd', 'e'], ['a', 'x', 'c', 'y', 'e']),
+            (list("hello"), list("world")),
+            (['line1', 'line2'], ['line1', 'inserted', 'line2']),
+            (['old1', 'old2', 'old3'], ['new1', 'new2']),
+        ]
+        
+        for old, new in test_cases:
+            script = LinearSpaceMyers(old, new).compute()
+            reconstructed = self._reconstruct_new(script)
+            self.assertEqual(reconstructed, new,
+                f"Reconstruction failed for old={old}, new={new}")
+            
+    def test_linear_space_single_character_changes(self):
+        """Test with single character sequences where the solution is deterministic."""
+        # Delete only
+        script = LinearSpaceMyers(['x'], []).compute()
+        self.assertEqual(len(script), 1)
+        self.assertEqual(script[0].op, OpType.DELETE)
+        self.assertEqual(script[0].value, 'x')
+        
+        # Insert only
+        script = LinearSpaceMyers([], ['y']).compute()
+        self.assertEqual(len(script), 1)
+        self.assertEqual(script[0].op, OpType.INSERT)
+        self.assertEqual(script[0].value, 'y')
+        
+        # Equal
+        script = LinearSpaceMyers(['z'], ['z']).compute()
+        self.assertEqual(len(script), 1)
+        self.assertEqual(script[0].op, OpType.EQUAL)
+        self.assertEqual(script[0].value, 'z')
+        
+    def test_linear_space_preserves_order(self):
+        """Test that equal elements maintain their order."""
+        old = ['a', 'b', 'c', 'd', 'e']
+        new = ['a', 'c', 'e']
+        
+        script = LinearSpaceMyers(old, new).compute()
+        equals = [a.value for a in script if a.op == OpType.EQUAL]
+        
+        self.assertEqual(equals, ['a', 'c', 'e'],
+            f"Order of equal elements not preserved: {equals}")
+
+
 class TestDiffEngine(unittest.TestCase):
     def test_modes(self):
         standard = DiffEngine(use_linear_space=False)
