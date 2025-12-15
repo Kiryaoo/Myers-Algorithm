@@ -11,13 +11,80 @@ class HirschbergDiff:
         self._linear_myers = None
         
     def compute(self) -> EditScript:
-        if self._linear_myers is None:
-            self._linear_myers = LinearSpaceMyers(self.original, self.modified)
-        return self._linear_myers.compute()
+        return self._hirschberg(self.original, self.modified)
+    
+    def _hirschberg(self, a: List[T], b: List[T]) -> EditScript:
+        n = len(a)
+        m = len(b)
+        
+        if n == 0:
+            return [make_insert(item) for item in b]
+        if m == 0:
+            return [make_delete(item) for item in a]
+            
+        if n == 1:
+            return self._diff_single_element(a[0], b)
+        if m == 1:
+            return self._diff_against_single(a, b[0])
+            
+        mid = n // 2
+        
+        score_left = self._score_forward(a[:mid], b)
+        score_right = self._score_backward(a[mid:], b)
+        combined = [score_left[j] + score_right[j] for j in range(m + 1)]
+        split_j = combined.index(min(combined))
+        
+        left_result = self._hirschberg(a[:mid], b[:split_j])
+        right_result = self._hirschberg(a[mid:], b[split_j:])
+        
+        return left_result + right_result
+    
+    def _score_forward(self, a: List[T], b: List[T]) -> List[int]:
+        n = len(a)
+        m = len(b)
+        prev = list(range(m + 1))
+        curr = [0] * (m + 1)
+        
+        for i in range(1, n + 1):
+            curr[0] = i
+            for j in range(1, m + 1):
+                if a[i - 1] == b[j - 1]:
+                    curr[j] = prev[j - 1]
+                else:
+                    curr[j] = 1 + min(prev[j], curr[j - 1])
+            prev, curr = curr, prev
+            
+        return prev
+    
+    def _score_backward(self, a: List[T], b: List[T]) -> List[int]:
+        return self._score_forward(a[::-1], b[::-1])[::-1]
+    
+    def _diff_single_element(self, elem: T, b: List[T]) -> EditScript:
+        result = []
+        found = False
+        for i, item in enumerate(b):
+            if item == elem and not found:
+                result.append(make_equal(elem))
+                found = True
+            else:
+                result.append(make_insert(item))
+        if not found:
+            result.insert(0, make_delete(elem))
+        return result
+    
+    def _diff_against_single(self, a: List[T], elem: T) -> EditScript:
+        result = []
+        found = False
+        for item in a:
+            if item == elem and not found:
+                result.append(make_equal(elem))
+                found = True
+            else:
+                result.append(make_delete(item))
+        if not found:
+            result.append(make_insert(elem))
+        return result
 
-def diff_linear(original: List[T], modified: List[T]) -> EditScript:
-    differ = HirschbergDiff(original, modified)
-    return differ.compute()
 
 class LinearSpaceMyers:
     def __init__(self, original: List[T], modified: List[T]):
@@ -126,7 +193,6 @@ class LinearSpaceMyers:
                     continue
                 
                 x_before_snake = x
-                
                 while x < n and y < m and a[n - 1 - x] == b[m - 1 - y]:
                     x += 1
                     y += 1
@@ -140,11 +206,14 @@ class LinearSpaceMyers:
                         snake_start_y = m - y
                         snake_end_x = n - x_before_snake
                         snake_end_y = m - (x_before_snake - k)
-                        
                         return (snake_start_x, snake_start_y, snake_end_x, snake_end_y, 2 * d)
                         
         return (0, 0, n, m, n + m)
 
+
+def diff_linear(original: List[T], modified: List[T]) -> EditScript:
+    differ = HirschbergDiff(original, modified)
+    return differ.compute()
 
 def diff_linear_myers(original: List[T], modified: List[T]) -> EditScript:
     differ = LinearSpaceMyers(original, modified)
