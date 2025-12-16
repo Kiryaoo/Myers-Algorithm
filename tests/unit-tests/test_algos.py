@@ -11,11 +11,12 @@ from algorithms.utils import (
 )
 from algorithms.myers import (
     MyersDiff, diff, patch, edit_distance, lcs_length,
-    similarity_ratio, find_middle_snake, SnakeInfo, EditGraphNode
+    similarity_ratio, SnakeInfo, EditGraphNode
 )
 from algorithms.hirschberg import (
     HirschbergDiff, diff_linear, LinearSpaceMyers,
-    diff_linear_myers, DiffEngine, BatchDiffer
+    diff_linear_myers, DiffEngine, BatchDiffer,
+    _find_middle_snake,
 )
 
 
@@ -229,9 +230,9 @@ class TestGraphStructures(unittest.TestCase):
         self.assertEqual(child.parent, parent)
         
     def test_find_middle_snake(self):
-        self.assertEqual(find_middle_snake([], [])[4], 0)
-        self.assertEqual(find_middle_snake(['a'], [])[4], 1)
-        result = find_middle_snake(['a', 'b'], ['a', 'b'])
+        self.assertEqual(_find_middle_snake([], [])[4], 0)
+        self.assertEqual(_find_middle_snake(['a'], [])[4], 1)
+        result = _find_middle_snake(['a', 'b'], ['a', 'b'])
         self.assertEqual(len(result), 5)
 
 

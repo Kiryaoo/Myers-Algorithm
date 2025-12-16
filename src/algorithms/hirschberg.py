@@ -219,6 +219,13 @@ def diff_linear_myers(original: List[T], modified: List[T]) -> EditScript:
     differ = LinearSpaceMyers(original, modified)
     return differ.compute()
 
+
+def _find_middle_snake(a: List[T], b: List[T]) -> Tuple[int, int, int, int, int]:
+    if len(a) == 0 or len(b) == 0:
+        return (0, 0, len(a), len(b), len(a) + len(b))
+    lsm = LinearSpaceMyers(a, b)
+    return lsm._find_middle_snake(a, b)
+
 class DiffEngine:
     def __init__(self, use_linear_space: bool = False):
         self.use_linear_space = use_linear_space
