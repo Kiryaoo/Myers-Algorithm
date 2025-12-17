@@ -223,19 +223,11 @@ class ScalingBenchmark:
 
 
 class MemoryBenchmark:
-    """
-    Measures actual memory consumption using tracemalloc.
-    This provides real runtime memory measurements rather than theoretical estimates.
-    """
     def __init__(self):
         self.results = []
         self.data_gen = DataGenerator()
         
     def _measure_memory(self, func: Callable, *args) -> int:
-        """
-        Measure actual peak memory usage of a function call using tracemalloc.
-        Returns memory usage in bytes.
-        """
         # Clear any existing traces
         tracemalloc.stop() if tracemalloc.is_tracing() else None
         
@@ -253,9 +245,6 @@ class MemoryBenchmark:
             tracemalloc.stop()
     
     def measure_algorithm_memory(self, old: List[str], new: List[str]) -> Dict[str, int]:
-        """
-        Measure actual memory usage for each algorithm.
-        """
         def run_myers():
             return myers_diff(old, new)
         
@@ -272,10 +261,7 @@ class MemoryBenchmark:
         }
         
     def run(self, sizes: List[int], similarity: float = 0.8) -> List[Dict[str, Any]]:
-        """
-        Run memory benchmarks for various input sizes.
-        Uses actual memory measurement via tracemalloc.
-        """
+
         self.results = []
         for size in sizes:
             old, new = self.data_gen.generate_similar_pair(size, similarity)
@@ -298,9 +284,6 @@ class MemoryBenchmark:
             print(f"{size:<10}{mem['Myers']:<20}{mem['Hirschberg']:<20}{mem['LinearSpaceMyers']:<20}")
         
     def compare_memory_efficiency(self) -> None:
-        """
-        Print a comparison showing memory efficiency ratios.
-        """
         if not self.results:
             print("No results available. Run benchmarks first.")
             return

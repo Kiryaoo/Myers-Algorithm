@@ -99,25 +99,15 @@ class TestHirschbergProperties(unittest.TestCase):
 
 
 class TestLinearSpaceOptimality(unittest.TestCase):
-    """
-    Test that LinearSpaceMyers produces optimal (shortest) edit scripts.
-    This is critical to ensure the space-optimized version maintains the
-    optimality guarantees of the original Myers algorithm.
-    """
     def setUp(self):
         self.config = GeneratorConfig(seed=555, max_length=20)
         self.seq_gen = SequenceGenerator(self.config)
         self.similar_gen = SimilarSequenceGenerator(self.config)
 
     def _edit_script_length(self, actions: List[EditAction]) -> int:
-        """Count the number of non-equal operations (edits) in the script."""
         return sum(1 for a in actions if a.op != OpType.EQUAL)
 
     def test_linear_space_produces_optimal_length(self):
-        """
-        Property test: LinearSpaceMyers should produce edit scripts of the same
-        length as the standard MyersDiff algorithm.
-        """
         for _ in range(30):
             old = self.seq_gen.generate_char_list(random.randint(3, 15))
             new = self.seq_gen.generate_char_list(random.randint(3, 15))
@@ -136,9 +126,6 @@ class TestLinearSpaceOptimality(unittest.TestCase):
             )
 
     def test_linear_space_optimality_similar_sequences(self):
-        """
-        Test optimality on similar sequences where greedy choices matter.
-        """
         for _ in range(20):
             old, new = self.similar_gen.generate_pair(random.randint(5, 15))
             
@@ -155,19 +142,16 @@ class TestLinearSpaceOptimality(unittest.TestCase):
             )
 
     def test_linear_space_optimality_known_cases(self):
-        """
-        Test optimality on known cases where the optimal solution is deterministic.
-        """
         test_cases = [
-            # (old, new, expected_edit_distance)
-            (list("ABCABBA"), list("CBABAC"), None),  # Classic case from Myers paper
-            (list("abc"), list("abc"), 0),  # Identical
-            (list("abc"), list("def"), 6),  # Complete replacement
-            (list("abcdef"), list("abxdef"), 2),  # Single change in middle
-            (list("abc"), list(""), 3),  # All deletes
-            (list(""), list("abc"), 3),  # All inserts
-            (list("aaa"), list("bbb"), 6),  # All different
-            (list("abcdefg"), list("abddefh"), None),  # Multiple changes
+
+            (list("ABCABBA"), list("CBABAC"), None),  
+            (list("abc"), list("abc"), 0),  
+            (list("abc"), list("def"), 6),  
+            (list("abcdef"), list("abxdef"), 2),  
+            (list("abc"), list(""), 3),  
+            (list(""), list("abc"), 3),  
+            (list("aaa"), list("bbb"), 6),  
+            (list("abcdefg"), list("abddefh"), None),  
         ]
         
         for old, new, expected in test_cases:
@@ -177,7 +161,7 @@ class TestLinearSpaceOptimality(unittest.TestCase):
             standard_length = self._edit_script_length(standard_script)
             linear_length = self._edit_script_length(linear_script)
             
-            # Both should match each other
+
             self.assertEqual(
                 linear_length, standard_length,
                 f"LinearSpaceMyers produced suboptimal script! "
@@ -185,7 +169,6 @@ class TestLinearSpaceOptimality(unittest.TestCase):
                 f"Standard: {standard_length}, Linear: {linear_length}"
             )
             
-            # If expected is specified, verify it
             if expected is not None:
                 self.assertEqual(
                     standard_length, expected,
@@ -195,9 +178,7 @@ class TestLinearSpaceOptimality(unittest.TestCase):
                 )
 
     def test_hirschberg_optimality(self):
-        """
-        Test that HirschbergDiff also maintains optimality.
-        """
+
         for _ in range(20):
             old = self.seq_gen.generate_char_list(random.randint(3, 12))
             new = self.seq_gen.generate_char_list(random.randint(3, 12))
